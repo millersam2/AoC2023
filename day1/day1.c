@@ -5,6 +5,8 @@
 #define NUM_DIGITS 2
 #define NUM_VALID_DIGITS 9
 
+// hello this is a test for pushing to remote repository
+
 int main() {
 	int tmp_buffer[NUM_DIGITS], i, sum = 0, strIndex = 0;
 	char c, tempStr[BUFF_SIZE] = {'\0'};
