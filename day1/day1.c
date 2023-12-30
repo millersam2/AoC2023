@@ -9,13 +9,16 @@ int parseFirstDigit(const char *line, int *firstDigit, int len);
 int parseLastDigit(const char *line, int *lastDigit, int len);
 int parseWritFirstDigit(const char *line, int *firstDigit, int len);
 int writFirstDigitHelper(const char *line, int len, const char *w_digit);
+int parseWritLastDigit(const char *line, int *lastDigit, int len);
+int writLastDigitHelper(const char *line, int len, const char *w_digit, int w_len);
 
 const char *w_digits[NUM_VALID_DIGITS] = {"one", "two", "three", "four", "five", "six", "seven", "eight", "nine"};
 
 int main() {
 	char buffer[BUFF_SIZE];
 	char *fname = "input.txt";
-	int firstDigit, lastDigit, len, index, sum = 0, calibrationVal;
+	int firstDigit, lastDigit, len, firstIndex, lastIndex, sum = 0, calibrationVal;
+	int w_firstDigit, w_lastDigit, w_firstIndex, w_lastIndex;
 	FILE *fd;
 
 	fd = fopen(fname, "r");
@@ -24,16 +27,31 @@ int main() {
 	}
 
 	while ((len = readLine(buffer, fd)) != 0) {
-		index = parseFirstDigit(buffer, &firstDigit, len);
-		if (index == -1) {
-			return -1;
-		}
-		index = parseLastDigit(buffer, &lastDigit, len);
-		if (index == -1) {
-			return -1;
-		}
-		// parseWritFirstDigit(buffer, &firstDigit, len);
+		firstIndex = parseFirstDigit(buffer, &firstDigit, len);
+		lastIndex = parseLastDigit(buffer, &lastDigit, len);
 
+		w_firstIndex = parseWritFirstDigit(buffer, &w_firstDigit, len);
+		// printf("parsed first written digit = %d\n", w_firstDigit);
+		w_lastIndex = parseWritLastDigit(buffer, &w_lastDigit, len);
+		// printf("parsed last written digit = %d\n", w_lastDigit);
+
+		if (firstIndex == -1) {
+			firstDigit = w_firstDigit;
+		}
+		if (firstIndex != -1 && w_firstIndex != -1) {
+			if (firstIndex > w_firstIndex) {
+				firstDigit = w_firstDigit;
+			}
+		}
+
+		if (lastIndex == -1) {
+			lastDigit = w_lastDigit;
+		}
+		if (lastIndex != -1 && w_lastIndex != -1) {
+			if (lastIndex < w_lastIndex) {
+				lastDigit = w_lastDigit;
+			}
+		}
 		calibrationVal = (10 * firstDigit) + lastDigit;
 		sum += calibrationVal;
 	}
@@ -100,7 +118,7 @@ int parseWritFirstDigit(const char *line, int *firstDigit, int len) {
 
 int writFirstDigitHelper(const char *line, int len, const char *w_digit) {
 	int i = 0, j;
-	char *temp;
+	const char *temp;
 	
 	while (i < len) {
 		if (line[i] == *w_digit) {
@@ -125,3 +143,43 @@ int writFirstDigitHelper(const char *line, int len, const char *w_digit) {
 	}
 	return -1;
 }
+
+int parseWritLastDigit(const char *line, int *lastDigit, int len) {
+	int i, firstIndex = -1, curIndex;
+
+	for (i = 0; i < NUM_VALID_DIGITS; i++) {
+		curIndex = writLastDigitHelper(line, len, w_digits[i], strlen(w_digits[i]));
+		if (curIndex != -1 && curIndex > firstIndex) {
+			firstIndex = curIndex;
+			*lastDigit = i + 1;
+		}
+	}
+	return firstIndex;
+}
+
+int writLastDigitHelper(const char *line, int len, const char *w_digit, int w_len) {
+	int i = len - 1, j, temp;
+
+	while (i >= 0) {
+		if (line[i] == w_digit[w_len - 1]) {
+			j = i;
+			temp = w_len - 1;
+
+			while (1) {
+				// check for success termination condition (match found)
+				if (temp == -1) {
+					return i - w_len + 1;
+				}
+				// check for non-success termination condition
+				if (j == -1 || line[j] != w_digit[temp]) {
+					break;
+				}
+				j--;
+				temp--;
+			}
+		}
+		i--;
+	}
+	return -1;
+}
+
