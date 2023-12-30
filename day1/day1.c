@@ -1,111 +1,127 @@
 #include <stdio.h> 
 #include <string.h>
 
-#define BUFF_SIZE 200
+#define BUFF_SIZE 250
 #define NUM_VALID_DIGITS 9
 
-typedef struct written_digit {
-	char digit[6];
-	int len;
-} w_digit;
+int readLine(char *buffer, FILE *fd);
+int parseFirstDigit(const char *line, int *firstDigit, int len);
+int parseLastDigit(const char *line, int *lastDigit, int len);
+int parseWritFirstDigit(const char *line, int *firstDigit, int len);
+int writFirstDigitHelper(const char *line, int len, const char *w_digit);
+
+const char *w_digits[NUM_VALID_DIGITS] = {"one", "two", "three", "four", "five", "six", "seven", "eight", "nine"};
 
 int main() {
-	const w_digit digits[NUM_VALID_DIGITS] = {
-		{"one", 3}, {"two", 3}, {"three", 5},
-		{"four", 4}, {"five", 4}, {"six", 3},
-		{"seven", 5}, {"eight", 5}, {"nine", 4}
-	};
-	int numCharMatches[NUM_VALID_DIGITS] = {0};
-	char lineBuffer[BUFF_SIZE] = {'\0'};
-	int firstDigit = -1;
-	int lastDigit = -1;
-	char c;
-	int count = 0, i, j, c_value, k, sum = 0;
-	w_digit curDigit;
+	char buffer[BUFF_SIZE];
+	char *fname = "input.txt";
+	int firstDigit, lastDigit, len, index, sum = 0, calibrationVal;
+	FILE *fd;
 
-	FILE *fd = fopen("test.txt", "r");
-
-	if (fd == NULL) {
+	fd = fopen(fname, "r");
+	if (!fd) {
 		return -1;
 	}
 
-	// read from entire file
-	while ((c = fgetc(fd)) != EOF) {
-		count = 0;
-		// read line by line
-		do {
-			lineBuffer[count] = c;
-			count++;
-		} while ((c = fgetc(fd)) != '\n' && c != EOF);
-
-		// insert a terminating null character to not include characters from
-		// a previous line
-		lineBuffer[count] = '\0';
-
-		printf("lineBuffer = %s\n", lineBuffer);
-
-		// parse line stored in the buffer backwards
-		for (i = count - 1; i >= 0; i--) {
-			// printf("%c\n", lineBuffer[i]);
-
-			// check for numeric digit characters
-			c_value = lineBuffer[i] - 48;
-			if (c_value < 10 && c_value > 0) {
-				if (lastDigit == -1) {
-					firstDigit = c_value;
-					lastDigit = c_value;
-				} else {
-					firstDigit = c_value;
-				}
-			}
-			
-			// check for written digits
-			for (j = 0; j < NUM_VALID_DIGITS; j++) {
-				curDigit = digits[j];
-				// check for character match given current matching sequence
-				if (lineBuffer[i] == curDigit.digit[curDigit.len - numCharMatches[j] - 1]) {
-					numCharMatches[j]++;
-					// check for full written digit match
-					if (numCharMatches[j] == curDigit.len) {
-
-						// // match found, reset numCharMatches
-						// for (k = 0; k < NUM_VALID_DIGITS; k++) {
-						// 	numCharMatches[k] = 0;
-						// }
-
-						// update first and/or last digit to reflect full match
-						if (lastDigit == -1) {
-							firstDigit = j + 1;
-							lastDigit = j + 1;
-							// printf("first digit = %d\n", firstDigit);
-							// printf("last digit = %d\n", lastDigit);
-						} else {
-							firstDigit = j + 1;
-						}
-						// printf("first digit = %d\n", firstDigit);
-						// printf("last digit = %d\n", lastDigit);
-					}
-				} else { // not a character match given current matching sequence
-					numCharMatches[j] = 0;
-					// check if the character is a match for a new sequence
-					if (lineBuffer[i] == curDigit.digit[curDigit.len - numCharMatches[j] - 1]) {
-						numCharMatches[j]++;
-					}
-				}
-			}
+	while ((len = readLine(buffer, fd)) != 0) {
+		index = parseFirstDigit(buffer, &firstDigit, len);
+		if (index == -1) {
+			return -1;
 		}
-		printf("first digit = %d\n", firstDigit);
-		printf("last digit = %d\n", lastDigit);
-		sum += (firstDigit * 10 + lastDigit);
+		index = parseLastDigit(buffer, &lastDigit, len);
+		if (index == -1) {
+			return -1;
+		}
+		// parseWritFirstDigit(buffer, &firstDigit, len);
 
-		// reset first digit and last digit for next line
-		firstDigit = -1;
-		lastDigit = -1;
+		calibrationVal = (10 * firstDigit) + lastDigit;
+		sum += calibrationVal;
 	}
 
-	printf("calibration value sum = %d\n", sum);
-
-	fclose(fd);
+	printf("sum of calibration values = %d\n", sum);
 
 	return 0;
+}
+
+int readLine(char *buffer, FILE *fd) {
+	char c;
+	int len = 0;
+
+	while ((c = fgetc(fd)) != '\n' && c != EOF) {
+		buffer[len] = c;
+		len++;
+	}
+	buffer[len] = '\0';
+	return len;
+}
+
+int parseFirstDigit(const char *line, int *firstDigit, int len) {
+	int i = 0;
+
+	while (i < len) {
+		if (line[i] >= '0' && line[i] <= '9') {
+			*firstDigit = line[i] - '0';
+			return i;
+		}
+		i++;
+	}
+	return -1;
+}
+
+int parseLastDigit(const char *line, int *lastDigit, int len) {
+	int i = len - 1;
+	
+	while (i >= 0) {
+		if (line[i] >= '0' && line[i] <= '9') {
+			*lastDigit = line[i] - '0';
+			return i;
+		}
+		i--;
+	}
+	return -1;
+}
+
+int parseWritFirstDigit(const char *line, int *firstDigit, int len) {
+	int i, firstIndex = BUFF_SIZE, curIndex;
+
+	for (i = 0; i < NUM_VALID_DIGITS; i++) {
+		curIndex = writFirstDigitHelper(line, len, w_digits[i]);
+		if (curIndex != -1 && curIndex < firstIndex) {
+			firstIndex = curIndex;
+			*firstDigit = i + 1;
+		}
+	}
+	// check that atleast one match was found
+	if (firstIndex != BUFF_SIZE) {
+		return firstIndex;
+	}
+	return -1;
+}
+
+int writFirstDigitHelper(const char *line, int len, const char *w_digit) {
+	int i = 0, j;
+	char *temp;
+	
+	while (i < len) {
+		if (line[i] == *w_digit) {
+			j = i;
+			temp = w_digit;
+
+			while (1) {
+				// written digit found
+				if (*temp == '\0') {
+					// *firstDigit = 999;
+					return i;
+				}
+				// check for non-success termination condition
+				if (j == len || line[j] != *temp) {
+					break;
+				}
+				j++;
+				temp++;
+			}
+		}
+		i++;
+	}
+	return -1;
 }
